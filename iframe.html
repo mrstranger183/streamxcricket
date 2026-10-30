@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Live Stream · streamxcricket</title>
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-SMZXC121E6"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', '');
+</script>
+
+<script>
+  if (window.self === window.top) {
+    document.addEventListener('contextmenu', function(e) { e.preventDefault(); return false; });
+    document.addEventListener('keydown', function(e) {
+      if (e.keyCode === 123 || (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) || (e.ctrlKey && e.keyCode === 85)) {
+        e.preventDefault(); window.location.href = "https://www.google.com"; return false;
+      }
+    });
+    (function() {
+      const threshold = 160;
+      setInterval(function() {
+        if (window.outerWidth - window.innerWidth > threshold || window.outerHeight - window.innerHeight > threshold) {
+          window.location.href = "https://www.google.com";
+        }
+      }, 1000);
+      try {
+        function checkDebugger() {
+          const startTime = new Date().getTime();
+          debugger; 
+          const endTime = new Date().getTime();
+          if (endTime - startTime > 100) { window.location.href = "https://www.google.com"; }
+        }
+        setInterval(checkDebugger, 2000);
+      } catch(err) {}
+    })();
+  }
+</script>
+
+<link rel="preconnect" href="https://www.jiotv.com/">
+<link rel="dns-prefetch" href="https://www.jiotv.com/">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shaka-player@latest/dist/controls.css">
+<style>
+  :root {
+    --bg-main: #000000;
+    --accent-olive: #6A7357;
+    --text-main: #FFFFFF;
+    --text-muted: #AAAAAA;
+    --white: #FFFFFF;
+    --tg-blue: #1e88e5;
+  }
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg-main);
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+    -webkit-user-select: none; user-select: none;
+    color: var(--text-main);
+  }
+  #overlay {
+    position: fixed; inset: 0;
+    background: var(--bg-main);
+    z-index: 9999; display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 20px;
+    animation: fadeIn .3s ease-out;
+  }
+  /* Colorless minimal spinner ring */
+  .spinner-ring {
+    width: 42px;
+    height: 42px;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-top: 3px solid rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    animation: spin 0.7s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  #overlay p { color: var(--text-muted); font-size: 13px; letter-spacing: 1px; font-weight: 500; }
+
+  #pc { position: fixed; inset: 0; background: #000000; display: flex; align-items: center; justify-content: center; touch-action: manipulation; }
+  video { width: 100%; height: 100%; object-fit: contain; background: #000000; will-change: transform; }
+
+  #status {
+    position: fixed; top: max(14px, env(safe-area-inset-top)); right: 12%;
+    transform: translateY(-10px); z-index: 9997; display: flex; align-items: center; gap: 7px;
+    padding: 8px 18px; background: #2b2b2b; border: 1px solid rgba(30,136,229,0.25);
+    font-size: 12px; border-radius: 30px; opacity: 0; transition: opacity 0.3s; white-space: nowrap; pointer-events: none;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.5); color: #fff;
+  }
+  #status.show { opacity: 1; transform: translateY(0); }
+  .st-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .st-dot.ok { background: var(--tg-blue); }
+  .st-dot.warn { background: var(--accent-olive); }
+  .st-dot.err { background: var(--text-muted); }
+
+  .telegram-corner-btn {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(35, 35, 35, 0.75);
+    padding: 8px 16px 8px 10px;
+    border-radius: 30px;
+    text-decoration: none;
+    color: #e0e0e0;
+    font-size: 14px;
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: all 0.25s ease;
+  }
+  .telegram-corner-btn:hover {
+    background: rgba(45, 45, 45, 0.85);
+    border-color: rgba(30, 136, 229, 0.4);
+    color: #ffffff;
+  }
+
+  .telegram-icon {
+    width: 26px;
+    height: 26px;
+    background: #1e88e5;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .telegram-icon svg {
+    width: 13px;
+    height: 13px;
+    fill: #fff;
+  }
+
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .custom-modal {
+    background: #2b2b2b;
+    width: 92%;
+    max-width: 420px;
+    padding: 28px 28px 16px 28px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9);
+    transform: scale(0.85);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .modal-overlay.active .custom-modal {
+    transform: scale(1);
+  }
+
+  .custom-modal h3 {
+    color: #fff;
+    font-size: 18px;
+    margin: 0 0 10px;
+    font-weight: 700;
+  }
+
+  .custom-modal p {
+    color: #ccc;
+    font-size: 15px;
+    margin: 0 0 24px;
+    line-height: 1.6;
+  }
+
+  .modal-buttons {
+    display: flex;
+    width: calc(100% + 56px);
+    margin-left: -28px;
+    margin-right: -28px;
+    border-top: 1px solid #3c3c3c;
+    margin-top: 12px;
+  }
+
+  .modal-btn {
+    background: transparent;
+    border: none;
+    color: #4dabf7;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 16px 0;
+    text-transform: uppercase;
+    transition: background 0.2s;
+  }
+
+  .modal-btn.cancel {
+    width: 32%;
+    color: #aaa;
+    border-right: 1px solid #3c3c3c;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .modal-btn.confirm {
+    width: 68%;
+    text-align: center;
+  }
+
+  .modal-btn:active {
+    background: rgba(255, 255, 255, 0.05);
+  }
+</style>
+</head>
+<body>
+  
+
+  <div class="modal-overlay" id="customModal">
+    <div class="custom-modal">
+      <h3>Join Our Telegram Channel</h3>
+      <p>Join for free streaming links</p>
+      <div class="modal-buttons">
+        <button class="modal-btn cancel" id="modalCancel">Cancel</button>
+        <button class="modal-btn confirm" id="modalConfirm">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="overlay">
+    <div class="spinner-ring"></div>
+    <p id="loadMsg">Loading Stream…</p>
+  </div>
+
+  <div id="status"></div>
+
+  <div data-shaka-player-container id="pc">
+    <video data-shaka-player id="v" playsinline webkit-playsinline preload="auto"></video>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/shaka-player@latest/dist/shaka-player.ui.js"></script>
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js"></script>
+  <script>
+    (function(){
+      "use strict";
+
+      var JSON_URL = "https://aryanstreams.pages.dev/data/sony_m3u8.json";
+
+      var $overlay = document.getElementById("overlay");
+      var $loadMsg = document.getElementById("loadMsg");
+      var $status  = document.getElementById("status");
+      var $pc      = document.getElementById("pc");
+      var $vid     = document.getElementById("v");
+      var _stTmr   = null;
+
+      function setupModalHandlers() {
+        const modal = document.getElementById('customModal');
+        const cancelBtn = document.getElementById('modalCancel');
+        const confirmBtn = document.getElementById('modalConfirm');
+
+        modal.classList.add('active');
+
+        cancelBtn.onclick = () => {
+          modal.classList.remove('active');
+        };
+
+        confirmBtn.onclick = () => {
+          window.open("https://t.me/+ffS9JohEjAYzNTZl", "_blank");
+          modal.classList.remove('active');
+        };
+      }
+
+      function toast(msg, type, dur){
+        $status.innerHTML = '<span class="st-dot ' + (type || "ok") + '"></span><span>' + msg + '</span>';
+        $status.className = "show";
+        if(_stTmr){ clearTimeout(_stTmr); _stTmr = null; }
+        if(dur !== 0){
+          _stTmr = setTimeout(function(){
+            $status.className = "";
+            _stTmr = null;
+          }, dur || 4000);
+        }
+      }
+
+      function setMsg(m)    { if($loadMsg) $loadMsg.textContent = m; }
+      function hideOverlay(){ if($overlay) $overlay.style.display = "none"; }
+      function getChId()    { return new URLSearchParams(location.search).get("id") || ""; }
+
+      async function loadData(){
+        var r = await fetch(JSON_URL, { cache: "no-store" });
+        if(!r.ok) throw new Error("HTTP " + r.status);
+        var json = await r.json();
+        var rawChannels = json.channels || [];
+        var channels = rawChannels.map(function(item){
+          return {
+            id: item.id,
+            name: item.name,
+            stream_url: item.proxied_url || item.raw_url
+          };
+        }).filter(function(c){ return c.stream_url && c.stream_url.length > 0; });
+        if(!channels.length) throw new Error("No channels found in JSON");
+        return { channels: channels };
+      }
+
+      function errMsg(msg){
+        setMsg(msg);
+        if($overlay) $overlay.style.display = "flex";
+        toast(msg, "err", 0);
+      }
+
+      async function startPlayer(ch){
+        $pc.style.display = "flex";
+
+        shaka.polyfill.installAll();
+        if(!shaka.Player.isBrowserSupported()){ errMsg("Browser not supported."); return; }
+
+        var player = window.player = new shaka.Player($vid);
+        var ui = new shaka.ui.Overlay(player, $pc, $vid);
+        var url = ch.stream_url;
+
+        // Optimized configuration for instant load speed and low latency
+        player.configure({
+          manifest: {
+            defaultPresentationDelay: 1,
+            ignoreTextStreamFailures: true,
+            retryParameters: {maxAttempts: 3, baseDelay: 200, backoffFactor: 1.5, timeout: 15000}
+          },
+          streaming: {
+            lowLatencyMode: true,
+            bufferingGoal: 6,
+            rebufferingGoal: 1,
+            bufferBehind: 15,
+            safeSeekOffset: 1,
+            stallEnabled: true
+          }
+        });
+
+        player.addEventListener("error", function(ev){
+          toast("Stream error", "err", 6000);
+        });
+
+        try {
+          setMsg("Loading stream…");
+          toast("Loading…", "warn", 0);
+          await player.load(url);
+          hideOverlay();
+          toast("● Live", "ok", 2000);
+          $vid.play().catch(function(){});
+          
+          // Popup triggers only after the stream successfully starts playing
+          setupModalHandlers();
+        } catch(e) {
+          hideOverlay();
+          toast("Stream error", "err", 0);
+        }
+      }
+
+      async function main(){
+        var id = getChId();
+        if(!id){
+          errMsg("Channel ID missing.");
+          return;
+        }
+        var data;
+        try {
+          setMsg("Fetching stream…");
+          data = await loadData();
+        } catch(_) {
+          errMsg("Connection error.");
+          return;
+        }
+        var channels = data.channels || data;
+        var ch = channels.find(function(c){ return String(c.id).toLowerCase() === String(id).toLowerCase(); });
+        if(!ch){ 
+          hideOverlay();
+          errMsg("Channel not found."); 
+          return; 
+        }
+        document.title = ch.name + " · CricxCrate";
+        await startPlayer(ch);
+      }
+
+      document.addEventListener("DOMContentLoaded", function() {
+        main();
+      });
+    })();
+  </script>
+</body>
+</html>
