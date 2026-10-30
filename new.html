@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <title>ios streamcricket</title>
+
+  <!-- Plyr CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/plyr@3.7.8/dist/plyr.css">
+
+  <!-- HLS.js -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+  <!-- Plyr JS -->
+  <script src="https://cdn.jsdelivr.net/npm/plyr@3.7.8/dist/plyr.polyfilled.js"></script>
+
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    html,body{width:100%;height:100%;background:#000000;overflow:hidden;
+      font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+      -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+
+    #tgBadge{
+      position:fixed;
+      top:max(12px,env(safe-area-inset-top));
+      left:max(12px,env(safe-area-inset-left));
+      z-index:10001;
+      display:inline-flex;align-items:center;gap:7px;
+      padding:7px 14px;
+      background:#0088CC;
+      backdrop-filter:blur(8px);
+      -webkit-backdrop-filter:blur(8px);
+      color:#FFFFFF;
+      font-size:12px;
+      font-weight:600;
+      letter-spacing:.3px;
+      text-decoration:none;
+      border-radius:20px;
+      border:1px solid rgba(255,255,255,0.8);
+      box-shadow:0 4px 12px rgba(0,0,0,0.65);
+      transition:transform .2s ease,box-shadow .2s ease;
+      -webkit-tap-highlight-color:transparent;
+    }
+    #tgBadge:hover{transform:translateY(-1px);box-shadow:0 5px 16px rgba(0,136,204,0.25)}
+    #tgBadge:active{transform:scale(.96)}
+    #tgBadge svg{width:15px;height:15px;flex-shrink:0;fill:#FFFFFF}
+    #tgBadge span{white-space:nowrap}
+
+    #overlay{
+      position:fixed;
+      inset:0;
+      background:rgba(0, 0, 0, 0.85);
+      backdrop-filter:blur(12px);
+      -webkit-backdrop-filter:blur(12px);
+      z-index:10000;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex-direction:column;
+      gap:16px;
+      transition:opacity 0.3s ease;
+    }
+    .spinner-ring {
+      width: 42px;
+      height: 42px;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top: 3px solid rgba(255, 255, 255, 0.9);
+      border-radius: 50%;
+      animation: spin 0.7s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+    #overlay p{
+      color:#FBF2DA;
+      font-size:13px;
+      letter-spacing:.5px;
+      text-align:center;
+      padding:0 24px;
+      font-weight:500;
+    }
+
+    #player-container{
+      position:fixed;
+      inset:0;
+      background:#000000;
+      z-index:9997;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    #player-container video{width:100%;height:100%;object-fit:contain;background:#000000}
+    .plyr{height:100%;width:100%;background:#000000}
+    .plyr__controls{background:linear-gradient(0deg,rgba(0,0,0,0.65),transparent)!important}
+    .plyr__control--overlaid{background:#0088CC!important}
+
+    #status{
+      position:fixed;
+      top:max(12px,env(safe-area-inset-top));
+      right:max(12px,env(safe-area-inset-right));
+      z-index:9999;
+      padding:5px 12px;
+      background:#111827;
+      border:1px solid rgba(255,255,255,0.8);
+      font-size:11px;
+      font-weight:500;
+      border-radius:20px;
+      pointer-events:none;
+      opacity:0;
+      transition:opacity .3s;
+      color:#FBF2DA;
+      backdrop-filter:blur(4px);
+    }
+    #status.show{opacity:1}
+    #status.warn{color:#0088CC}
+    #status.err{color:#F3F4F6}
+
+    /* Modal Popup Styling */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 20000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .custom-modal {
+      background: #2b2b2b;
+      width: 92%;
+      max-width: 420px;
+      padding: 28px 28px 16px 28px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9);
+      transform: scale(0.85);
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .modal-overlay.active .custom-modal {
+      transform: scale(1);
+    }
+    .custom-modal h3 {
+      color: #fff;
+      font-size: 18px;
+      margin: 0 0 10px;
+      font-weight: 700;
+    }
+    .custom-modal p {
+      color: #ccc;
+      font-size: 15px;
+      margin: 0 0 24px;
+      line-height: 1.6;
+    }
+    .modal-buttons {
+      display: flex;
+      width: calc(100% + 56px);
+      margin-left: -28px;
+      margin-right: -28px;
+      border-top: 1px solid #3c3c3c;
+      margin-top: 12px;
+    }
+    .modal-btn {
+      background: transparent;
+      border: none;
+      color: #4dabf7;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 16px 0;
+      text-transform: uppercase;
+      transition: background 0.2s;
+    }
+    .modal-btn.cancel {
+      width: 32%;
+      color: #aaa;
+      border-right: 1px solid #3c3c3c;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .modal-btn.confirm {
+      width: 68%;
+      text-align: center;
+    }
+    .modal-btn:active {
+      background: rgba(255, 255, 255, 0.05);
+    }
+  </style>
+</head>
+<body>
+
+
+
+<div id="overlay">
+  <div class="spinner-ring"></div>
+  <p id="loadMsg">Connecting stream…</p>
+</div>
+
+<div id="status" class="ok">● Live</div>
+
+<div id="player-container">
+  <video id="player" playsinline webkit-playsinline preload="metadata"></video>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+var M3U_URL = "https://sportlink-jtv.pages.dev/sony3.m3u";
+var PROXY_BASE = "https://sunny-relay-friend.lovable.app/api/public/px/sony?url=";
+var SONY_SPORT_ONLY = true;
+
+var SONY_RE = /\bsony\b/i;
+var SPORT_RE = /(\bsport(s)?\b|\bten\b|\bten\s*[1-5]\b|\bsix\b|\bespn\b|\bgolf\b|\bselect\b)/i;
+
+function isSonySport(ch){
+  var hay = ((ch.name || "") + " " + (ch.category || ""));
+  if(!SONY_RE.test(hay)) return false;
+  return SPORT_RE.test(hay);
+}
+
+var $overlay = document.getElementById("overlay");
+var $loadMsg = document.getElementById("loadMsg");
+var $status = document.getElementById("status");
+var $playerContainer = document.getElementById("player-container");
+var $video = document.getElementById("player");
+var $tgBadge = document.getElementById("tgBadge");
+
+var _stTmr = null;
+var currentPlayer = null;
+var currentHls = null;
+var resumeTmr = null;
+
+function setupModalHandlers() {
+  const modal = document.getElementById('customModal');
+  const cancelBtn = document.getElementById('modalCancel');
+  const confirmBtn = document.getElementById('modalConfirm');
+
+  modal.classList.add('active');
+
+  cancelBtn.onclick = () => {
+    modal.classList.remove('active');
+  };
+
+  confirmBtn.onclick = () => {
+    window.open("https://t.me/+ffS9JohEjAYzNTZl", "_blank");
+    modal.classList.remove('active');
+  };
+}
+
+function toast(msg,type,dur){
+  $status.textContent=msg;
+  $status.className="show "+(type||"ok");
+  if(_stTmr) clearTimeout(_stTmr);
+  if(dur!==0){
+    _stTmr=setTimeout(function(){
+      $status.className=$status.className.replace("show","").trim();
+      _stTmr=null;
+    },dur||4000);
+  }
+}
+
+function setMsg(m) { $loadMsg && ($loadMsg.textContent = m); }
+function showOverlay(m) { if(m) setMsg(m); $overlay.style.display = "flex"; }
+function hideOverlay() { $overlay.style.display = "none"; }
+function getChId() { return new URLSearchParams(location.search).get("id") || ""; }
+function proxyUrl(url){
+  if(!url) return url;
+  if(url.indexOf(PROXY_BASE) === 0) return url;
+  return PROXY_BASE + encodeURIComponent(url);
+}
+
+function parseM3U(text){
+  var channels = [];
+  var lines = text.split(/\r?\n/);
+  var current = null;
+
+  for(var i=0;i<lines.length;i++){
+    var line = lines[i].trim();
+    if(!line) continue;
+
+    if(line.indexOf("#EXTINF:") === 0){
+      var info = line.substring(8);
+      var commaIdx = info.indexOf(",");
+      var name = commaIdx >= 0 ? info.substring(commaIdx+1).trim() : "Unknown";
+
+      name = name.replace(/@\w+/gi, "").replace(/sayan\d*/gi, "").trim();
+
+      var attrs = commaIdx >= 0 ? info.substring(0,commaIdx) : info;
+
+      var id = "";
+      var logo = "";
+
+      var idMatch = attrs.match(/tvg-id="([^"]*)"/i);
+      if(idMatch) id = idMatch[1];
+
+      var logoMatch = attrs.match(/tvg-logo="([^"]*)"/i) || attrs.match(/logo="([^"]*)"/i);
+      if(logoMatch) logo = logoMatch[1];
+
+      var safeId = id || (name.replace(/[^a-z0-9]+/gi,"_").toLowerCase() + "_" + channels.length);
+
+      current = { id: safeId, name: name, logo: logo, stream_url: "" };
+    }
+    else if(line.charAt(0) === "#"){
+      continue;
+    }
+    else if(current){
+      current.stream_url = line;
+      channels.push(current);
+      current = null;
+    }
+  }
+  return channels;
+}
+
+async function loadData(){
+  var r = await fetch(M3U_URL, {cache:"no-store"});
+  if(!r.ok) throw new Error("HTTP " + r.status);
+  var text = await r.text();
+  var channels = parseM3U(text);
+
+  channels = channels.filter(function(c){ return c.stream_url && c.stream_url.length > 0; });
+  if(SONY_SPORT_ONLY){
+    var sonySports = channels.filter(isSonySport);
+    if(sonySports.length) channels = sonySports;
+  }
+  if(!channels.length) throw new Error("No channels found");
+  return { channels: channels };
+}
+
+function setupHLSPlayer(url){
+  showOverlay("Connecting stream…");
+  toast("Connecting stream…", "warn", 0);
+
+  if(currentHls) { try { currentHls.destroy(); } catch(e){} currentHls = null; }
+  if(currentPlayer) { try { currentPlayer.destroy(); } catch(e){} currentPlayer = null; }
+
+  var playUrl = proxyUrl(url);
+  var defaultOptions = {
+    controls: ['play', 'progress', 'current-time', 'mute', 'volume', 'captions', 'settings', 'fullscreen'],
+    settings: ['quality'],
+    autoplay: true,
+    muted: true
+  };
+
+  var isM3U8 = /\.m3u8(\?|$)/i.test(url) || url.indexOf('.m3u8') !== -1;
+
+  if(Hls.isSupported() && isM3U8) {
+    var hls = new Hls({
+      autoStartLoad: true,
+      enableWorker: true,
+      lowLatencyMode: true,
+      backbufferLength: 15,
+      maxBufferLength: 30,
+      maxMaxBufferLength: 60,
+      maxBufferSize: 60 * 1000 * 1000,
+      liveSyncDurationCount: 3,
+      liveMaxLatencyDurationCount: 10,
+      manifestLoadingTimeOut: 10000,
+      manifestLoadingMaxRetry: 4,
+      fragLoadingTimeOut: 15000,
+      fragLoadingMaxRetry: 4
+    });
+    currentHls = hls;
+    hls.loadSource(playUrl);
+    hls.attachMedia($video);
+
+    hls.on(Hls.Events.MANIFEST_PARSED, function(_, data) {
+      var qualities = data.levels.map(l => l.height).filter(h => h).sort((a,b) => b-a);
+      qualities = qualities.filter((v,i) => qualities.indexOf(v) === i);
+
+      currentPlayer = new Plyr($video, Object.assign({}, defaultOptions, qualities.length ? {
+        quality: {
+          default: qualities[0],
+          options: qualities,
+          forced: true,
+          onChange: function(q) {
+            hls.levels.forEach((level, index) => { if(level.height === q) hls.currentLevel = index; });
+          }
+        }
+      } : {}));
+
+      $video.play().catch(function(){});
+      hideOverlay();
+      toast("● Live", "ok", 2500);
+      setupModalHandlers();
+    });
+
+    hls.on(Hls.Events.ERROR, function(_, data) {
+      if(data.fatal) {
+        if(data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+          hls.startLoad();
+        } else if(data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+          hls.recoverMediaError();
+        } else {
+          hls.destroy();
+          setupHLSPlayer(url);
+        }
+      }
+    });
+  } else {
+    $video.src = playUrl;
+    currentPlayer = new Plyr($video, defaultOptions);
+    $video.play().catch(function(){});
+    hideOverlay();
+    toast("● Live", "ok", 2500);
+    setupModalHandlers();
+  }
+
+  if(resumeTmr) clearInterval(resumeTmr);
+  resumeTmr = setInterval(function() {
+    if($video.paused && $video.readyState > 2) $video.play().catch(function(){});
+  }, 2000);
+
+  function unmute() { $video.muted = false; $video.volume = 1; document.removeEventListener("click", unmute); }
+  document.addEventListener("click", unmute);
+}
+
+function errMsg(msg){ showOverlay(msg); toast(msg,"err",0); }
+
+async function main(){
+  var id = getChId();
+  var data;
+  showOverlay("Loading channel…");
+  try {
+    data = await loadData();
+  } catch(e) {
+    errMsg("Connection error.");
+    return;
+  }
+
+  var channels = data.channels || data;
+  var ch = null;
+
+  if(id) {
+    ch = channels.find(c => String(c.id).toLowerCase() === String(id).toLowerCase()) ||
+         channels.find(c => String(c.id).toLowerCase().includes(String(id).toLowerCase()));
+  }
+  
+  if(!ch && channels.length > 0) {
+    ch = channels[0];
+  }
+
+  if(!ch) { 
+    errMsg("Channel not found."); 
+    return; 
+  }
+
+  document.title = ch.name + " · CricxCrate";
+  setupHLSPlayer(ch.stream_url);
+}
+
+document.addEventListener("DOMContentLoaded", main);
+})();
+</script>
+</html>
